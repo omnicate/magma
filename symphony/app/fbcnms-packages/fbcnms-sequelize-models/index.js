@@ -47,6 +47,9 @@ export function jsonArrayContains(column: string, value: string) {
     sequelize.getDialect() === 'mariadb'
   ) {
     return Sequelize.fn('JSON_CONTAINS', Sequelize.col(column), `"${value}"`);
+  } else if (sequelize.getDialect() === 'postgresql') {
+    const jsonbCol = Sequelize.col(column) + '::jsonb'
+    return Sequelize.where(`${jsonbCol} @> $"{value}"`)
   } else {
     // sqlite
     const escapedColumn = sequelize
