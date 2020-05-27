@@ -3,18 +3,17 @@
 version: '3.6'
 
 services:
-  mariadb:
-    image: mariadb:10.4.12
+  postgres:
+    image: postgres:12.3-alpine
     volumes:
-      - nmsdb:/var/lib/mysql
+      - nmsdb:/var/lib/postgres/data
     environment:
-      MYSQL_ROOT_PASSWORD: 12345
-      MYSQL_DATABASE: nms
-      MYSQL_USER: nms
-      MYSQL_PASSWORD: password
+      POSTGRES_DB: nms
+      POSTGRES_USER: nms
+      POSTGRES_PASSWORD: password
     restart: on-failure
     healthcheck:
-      test: mysqladmin ping -p12345
+      test: pg_isready
 
   nginx-proxy:
     image: nginx
@@ -29,14 +28,14 @@ services:
     build:
       context: ../..
       dockerfile: fbcnms-projects/magmalte/Dockerfile
-    command: "/usr/local/bin/wait-for-it.sh -s -t 30 mariadb:3306 -- yarn run start:dev"
+    command: "/usr/local/bin/wait-for-it.sh -s -t 30 postgres:5432 -- yarn run start:dev"
     volumes:
       - ../../fbcnms-packages:/usr/src/fbcnms-packages
       - ../../fbcnms-projects/magmalte/app:/usr/src/fbcnms-projects/magmalte/app
       - ../../fbcnms-projects/magmalte/scripts:/usr/src/fbcnms-projects/magmalte/scripts
       - ../../fbcnms-projects/magmalte/server:/usr/src/fbcnms-projects/magmalte/server
     depends_on:
-      - mariadb
+      - postgres
     networks:
       - default
       - orc8r_default
@@ -48,12 +47,12 @@ services:
       API_HOST: ${API_HOST:-proxy:9443}
       PORT: 8081
       HOST: 0.0.0.0
-      MYSQL_HOST: mariadb
+      MYSQL_HOST: postgres
       MYSQL_DB: nms
       MYSQL_USER: nms
       MYSQL_PASS: password
       MAPBOX_ACCESS_TOKEN: ${MAPBOX_ACCESS_TOKEN:-}
-      MYSQL_DIALECT: mariadb
+      MYSQL_DIALECT: postgres
     healthcheck:
       test: curl -If localhost:8081/healthz
     restart: on-failure
@@ -63,9 +62,9 @@ services:
 
 secrets:
   api_cert:
-    file: ${API_CERT_FILENAME:-../../../.cache/test_certs/admin_operator.pem}
+    file: ${API_CERT_FILENAME:-../../../../.cache/test_certs/admin_operator.pem}
   api_key:
-    file: ${API_PRIVATE_KEY_FILENAME:-../../../.cache/test_certs/admin_operator.key.pem}
+    file: ${API_PRIVATE_KEY_FILENAME:-../../../../.cache/test_certs/admin_operator.key.pem}
 
 networks:
   orc8r_default:
